@@ -41,15 +41,19 @@ urlShortner.path("original_url").validate(function(value) { return value != null
 // a model;
 let Url = mongoose.model("Url", urlShortner);
 
-// 
+// a post with url validator
 let number = 0;
 const incrementer = () => number += 1;
 app.use(bodyParser.urlencoded({ extended: false }));
 app.post("/api/shorturl", (req, res) => {
-  let url = new URL(req.body.url);
+    try {
+    let url = new URL(req.body.url);
+      if (url.origin === null) {
+        return res.json({ error: "invalid url" })
+      }
   dns.lookup(url.hostname, (err, address, family) => {
     console.log(url.hostname)
-    if (err) return res.json({ error: "invalid url" });
+    if (err) {return res.json({ error: "invalid url" })};
     Url.findOne({ original_url: url }, function(err, data) {
       if (err) { return "error" }
       console.log(data);
@@ -64,8 +68,12 @@ app.post("/api/shorturl", (req, res) => {
       }
     })
   })
+    } catch (e) {
+    return res.json({ error: "invalid url" })
+  }
 })
 
+// get width input from user redirecting to orginal url
 app.get("/api/shorturl/:number", (req, res) => {
   Url.findOne({ short_url: req.params.number }, function(err, data) {
       if (err) { return "error" }
@@ -73,10 +81,16 @@ app.get("/api/shorturl/:number", (req, res) => {
       if (data === null) {
         res.json({ error: "No short URL found for the given input" })
       } else {
-        res.redirect(302, data.original_url)
+        res.redirect(301, data.original_url)
       }
     })
 })
+
+/*Url.deleteMany({short_url: 5}, (err, data) => {
+  if (err) return "error"
+  console.log(data)
+})*/
+
 
 app.listen(port, function() {
   console.log(`Listening on port ${port}`);
